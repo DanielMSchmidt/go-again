@@ -29,6 +29,9 @@ enum Commands {
     /// Interactively select which tests to re-run
     Select,
 
+    /// Interactively select and re-run tests in a loop
+    Watch,
+
     /// Clear all remembered tests for current project
     Clear,
 }
@@ -41,6 +44,7 @@ fn main() {
         Commands::Run { update } => cmd_run(update),
         Commands::List => cmd_list(),
         Commands::Select => cmd_select(),
+        Commands::Watch => cmd_watch(),
         Commands::Clear => cmd_clear(),
     };
 
@@ -237,6 +241,88 @@ fn cmd_select() -> io::Result<()> {
     println!("\nResults: {} passed, {} failed", passed, failed);
 
     Ok(())
+}
+
+fn cmd_watch() -> io::Result<()> {
+    let key = project::get_project_key()?;
+
+    loop {
+        let tests = storage::get_for_project(&key)?;
+
+        if tests.is_empty() {
+            println!("No failing tests remembered for this project/branch.");
+            return Ok(());
+        }
+
+        // Build items for skim
+        let items: Vec<String> = tests
+            .iter()
+            .map(|t| format!("{} {}", t.package, t.name))
+            .collect();
+
+        let options = SkimOptionsBuilder::default()
+            .multi(true)
+            .prompt(Some("Select tests to run (Ctrl-C to quit)> "))
+            .build()
+            .unwrap();
+
+        let item_reader = SkimItemReader::default();
+        let items_str = items.join("\n");
+        let items = item_reader.of_bufread(std::io::Cursor::new(items_str));
+
+        let selected = match Skim::run_with(&options, Some(items)) {
+            Some(output) if !output.is_abort => output.selected_items,
+            _ => {
+                println!("Watch mode ended.");
+                return Ok(());
+            }
+        };
+
+        if selected.is_empty() {
+            println!("No tests selected. Select tests or press Ctrl-C to quit.");
+            continue;
+        }
+
+        // Parse selected items back to FailedTest
+        let selected_tests: Vec<FailedTest> = selected
+            .iter()
+            .filter_map(|item| {
+                let text = item.output().to_string();
+                let mut parts = text.splitn(2, ' ');
+                let package = parts.next()?.to_string();
+                let name = parts.next()?.to_string();
+                Some(FailedTest { package, name })
+            })
+            .collect();
+
+        println!("\nRunning {} selected test(s)...\n", selected_tests.len());
+
+        let results = runner::run_tests(&selected_tests);
+
+        for result in &results {
+            let status = if result.passed { "PASS" } else { "FAIL" };
+            println!("[{}] {} {}", status, result.test.package, result.test.name);
+
+            if !result.passed {
+                for line in result.output.lines().take(20) {
+                    println!("  {}", line);
+                }
+                if result.output.lines().count() > 20 {
+                    println!("  ... (output truncated)");
+                }
+                println!();
+            }
+        }
+
+        let passed = results.iter().filter(|r| r.passed).count();
+        let failed = results.len() - passed;
+        println!("\nResults: {} passed, {} failed", passed, failed);
+        println!("\nPress Enter to continue to selection...");
+
+        // Wait for user to press Enter before returning to selection
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+    }
 }
 
 fn cmd_clear() -> io::Result<()> {

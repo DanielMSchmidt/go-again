@@ -179,11 +179,11 @@ mod tests {
     #[test]
     fn test_creates_parent_directory() {
         let dir = TempDir::new().unwrap();
-        let path = Some(dir.path().join("nested").join("dir").join("state.json"));
+        let path = dir.path().join("nested").join("dir").join("state.json");
 
         let state = StateMap::new();
-        save_to_path(&state, path.clone()).unwrap();
+        save_to_path(&state, Some(path.clone())).unwrap();
 
-        assert!(path.unwrap().exists());
+        assert!(path.exists());
     }
 }
