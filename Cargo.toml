@@ -1,6 +1,16 @@
 [package]
 name = "go-again"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dirs = "5"
+skim = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
