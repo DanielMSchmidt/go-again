@@ -60,7 +60,7 @@ jobs:
         run: cargo test --verbose
 
   msrv:
-    name: MSRV (1.78.0)
+    name: MSRV (1.85.0)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.78.0"
+          toolchain: "1.85.0"
 
       - name: Cache
         uses: Swatinem/rust-cache@v2
@@ -176,6 +176,9 @@ jobs:
 
       - name: Add to PATH
         run: echo "$PWD/target/release" >> $GITHUB_PATH
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Regenerate demo GIF
         uses: charmbracelet/vhs-action@v2
