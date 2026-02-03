@@ -2,6 +2,8 @@
 
 A CLI tool that remembers your failing Go tests so you can re-run them quickly.
 
+![go-again demo](demo.gif)
+
 ## The Problem
 
 When working on a large Go codebase, you often:
@@ -134,6 +136,27 @@ go-again clear
 - Each project+branch combination has its own list
 - Project identity is based on git repository root and current branch
 - Switching branches automatically switches to that branch's failing tests
+
+## Contributing
+
+### Regenerating the demo GIF
+
+The demo GIF is generated using [VHS](https://github.com/charmbracelet/vhs):
+
+```sh
+brew install vhs
+vhs demo.tape
+```
+
+### Running the example project
+
+The `testdata/example-project` contains a Go project with intentionally failing tests for CI verification:
+
+```sh
+cd testdata/example-project
+go test ./... | go-again remember
+go-again list
+```
 
 ## License
 

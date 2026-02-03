@@ -105,3 +105,51 @@ jobs:
 
       - name: Run cargo-deny
         run: cargo deny check
+
+  examples:
+    name: Verify CLI Examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Build go-again
+        run: cargo build --release
+
+      - name: Add to PATH
+        run: echo "$PWD/target/release" >> $GITHUB_PATH
+
+      - name: Test example project workflow
+        run: |
+          cd testdata/example-project
+
+          # Verify go tests have expected failures
+          go test ./... 2>&1 | tee test-output.txt || true
+          grep -q "FAIL.*TestMultiply" test-output.txt
+          grep -q "FAIL.*TestReverse" test-output.txt
+
+          # Test remember command
+          cat test-output.txt | go-again remember | tee remember-output.txt
+          grep -q "Remembered 2 failing" remember-output.txt
+
+          # Test list command
+          go-again list | tee list-output.txt
+          grep -q "TestMultiply" list-output.txt
+          grep -q "TestReverse" list-output.txt
+
+          # Test run command (should fail since bugs aren't fixed)
+          go-again run || true
+
+          # Test clear command
+          go-again clear | grep -q "Cleared"
+          go-again list | grep -q "No failing tests"
