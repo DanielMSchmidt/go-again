@@ -3,15 +3,25 @@ on:
     push:
         paths:
             - demo.tape
+            - src/**/*.go
     workflow_dispatch: {}
 jobs:
     vhs:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
-            - uses: charmbracelet/vhs-action@v2.1
-              with:
-                  path: "demo.tape"
+            - name: Install VHS dependencies
+              run: |
+                  sudo apt update
+                  sudo apt install -y ffmpeg ttyd
+                  go install github.com/charmbracelet/vhs@latest
+
+            - name: Generate demo with VHS
+              run: vhs demo.tape
+              env:
+                  TERM: xterm-256color
+                  COLORTERM: truecolor
+
             - uses: stefanzweifel/git-auto-commit-action@v4
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
