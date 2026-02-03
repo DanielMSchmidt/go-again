@@ -1,41 +1,140 @@
 # go-again
 
-This project is a Rust CLI meant as a go development helper.
-When working with a big go codebase with a lot of tests one often runs all tests to understand where things are broken.
-The developer then takes the failing test cases (or the test cases that had a panic) and runs them individually or just all failing ones.
-When the developer isolated and fixed the failing test case, he first wants to run the previously failing tests to see if they now pass.
-Only then one would want to run all tests again.
+A CLI tool that remembers your failing Go tests so you can re-run them quickly.
 
-`go-again` helps with this workflow.
-It hooks into the process of running tests and storing the last failed tests in a file per project & branch with the `go-again remember` subcommand. The developer just needs to pipe the go test command output into `go-again remember`. For example running all tests and remembering the failed ones would look like this:
+## The Problem
+
+When working on a large Go codebase, you often:
+
+1. Run all tests and see several failures
+2. Pick one failing test to fix
+3. Want to re-run *just* the failing tests to check your fix
+4. Repeat until all tests pass
+
+Manually copying test names and constructing `go test -run` commands gets tedious fast.
+
+## The Solution
+
+`go-again` automates this workflow:
 
 ```sh
+# Run tests and remember failures
 go test ./... | go-again remember
-```
 
-When the developer wants to re-run the previously failed tests, he can use go-again again with the `go-again run` command. For example:
-
-```sh
-# Assuming the following tests failed previously:
-# ./internal/logic TestCalculateSum
-# ./api/handler TestHandleRequest
-# This command will re-run only those tests
+# Re-run only the failing tests
 go-again run
 ```
 
-The developer can also use `go-again select` to select which of the previously failed tests to run again.
-This will run an fzf style selector in the terminal to pick the tests to re-run.
+That's it. Failed tests are stored per project and branch, so you can context-switch freely.
+
+## Installation
+
+### Homebrew (macOS) - Recommended
+
+```sh
+brew tap danielmschmidt/homebrew-tap
+brew install go-again
+```
+
+Or in one command:
+
+```sh
+brew install danielmschmidt/homebrew-tap/go-again
+```
+
+### Binary Releases
+
+Download pre-built binaries from [GitHub Releases](https://github.com/DanielMSchmidt/go-again/releases).
+
+### From Source
+
+Requires [Rust](https://rustup.rs/):
+
+```sh
+cargo install --git https://github.com/DanielMSchmidt/go-again
+```
+
+## Quick Start
+
+```sh
+# 1. Run your tests and pipe to go-again
+go test ./... | go-again remember
+# Output: Remembered 3 failing tests
+
+# 2. Fix a bug, then re-run just the failing tests
+go-again run
+
+# 3. Once everything passes, clear the list
+go-again clear
+```
+
+## Commands
+
+### `remember` - Capture failing tests
+
+Reads `go test` output from stdin and stores any failures.
+
+```sh
+go test ./... | go-again remember
+go test ./... -v | go-again remember   # verbose works too
+go test ./... -json | go-again remember # JSON output works too
+```
+
+### `run` - Re-run failing tests
+
+Runs all remembered failing tests.
+
+```sh
+go-again run
+```
+
+Use `--update` to automatically remove tests that now pass:
+
+```sh
+go-again run --update
+```
+
+### `list` - Show failing tests
+
+See what tests are currently remembered.
+
+```sh
+go-again list
+# ./internal/logic TestCalculateSum
+# ./api/handler TestHandleRequest
+```
+
+### `select` - Pick tests interactively
+
+Opens an fzf-style picker to choose which tests to run.
 
 ```sh
 go-again select
 ```
 
-If the developer just wants to see which tests failed previously, he can use `go-again list`:
+### `watch` - Interactive test loop
+
+Combines `select` and `run` in a loop. Pick tests, run them, repeat.
 
 ```sh
-go-again list
-
-# This will output something like:
-#$> ./internal/logic TestCalculateSum
-#$> ./api/handler TestHandleRequest
+go-again watch
 ```
+
+### `clear` - Reset
+
+Forget all remembered tests for the current project/branch.
+
+```sh
+go-again clear
+```
+
+## How It Works
+
+- Failed tests are stored in `~/.go-again/state.json`
+- Each project+branch combination has its own list
+- Project identity is based on git repository root and current branch
+- Switching branches automatically switches to that branch's failing tests
+
+## License
+
+MIT
