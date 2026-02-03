@@ -60,7 +60,7 @@ jobs:
         run: cargo test --verbose
 
   msrv:
-    name: MSRV (1.74.0)
+    name: MSRV (1.78.0)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.74.0"
+          toolchain: "1.78.0"
 
       - name: Cache
         uses: Swatinem/rust-cache@v2
@@ -180,8 +180,8 @@ jobs:
       - name: Install VHS
         run: |
           VHS_VERSION="0.8.0"
-          curl -fsSL "https://github.com/charmbracelet/vhs/releases/download/v${VHS_VERSION}/vhs_${VHS_VERSION}_Linux_x86_64.tar.gz" | tar xz
-          sudo mv vhs /usr/local/bin/
+          curl -fsSL "https://github.com/charmbracelet/vhs/releases/download/v${VHS_VERSION}/vhs_${VHS_VERSION}_Linux_amd64.deb" -o vhs.deb
+          sudo dpkg -i vhs.deb
 
       - name: Install ttyd (VHS dependency)
         run: sudo apt-get update && sudo apt-get install -y ttyd
