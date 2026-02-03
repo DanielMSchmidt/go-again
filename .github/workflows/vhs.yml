@@ -3,6 +3,7 @@ on:
     push:
         paths:
             - demo.tape
+    workflow_dispatch: {}
 jobs:
     vhs:
         runs-on: ubuntu-latest
