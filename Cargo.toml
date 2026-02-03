@@ -2,6 +2,7 @@
 name = "go-again"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.74.0"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

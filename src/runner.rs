@@ -16,7 +16,14 @@ pub fn run_test(test: &FailedTest) -> io::Result<TestResult> {
     let test_pattern = format!("^{}$", regex_escape(&test.name));
 
     let output = Command::new("go")
-        .args(["test", &test.package, "-run", &test_pattern, "-v", "-count=1"])
+        .args([
+            "test",
+            &test.package,
+            "-run",
+            &test_pattern,
+            "-v",
+            "-count=1",
+        ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()?;
@@ -64,7 +71,10 @@ fn regex_escape(s: &str) -> String {
 /// Build the go test command for a test (useful for display/debugging).
 pub fn build_test_command(test: &FailedTest) -> String {
     let test_pattern = format!("^{}$", regex_escape(&test.name));
-    format!("go test {} -run '{}' -v -count=1", test.package, test_pattern)
+    format!(
+        "go test {} -run '{}' -v -count=1",
+        test.package, test_pattern
+    )
 }
 
 #[cfg(test)]
