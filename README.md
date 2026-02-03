@@ -139,23 +139,27 @@ go-again clear
 
 ## Contributing
 
-### Regenerating the demo GIF
+### Demo GIF
 
-The demo GIF is generated using [VHS](https://github.com/charmbracelet/vhs):
+The demo GIF is generated from `demo.tape` using [VHS](https://github.com/charmbracelet/vhs). CI verifies the tape runs successfully and that `demo.gif` is up-to-date.
+
+If you modify `demo.tape`, regenerate the GIF before committing:
 
 ```sh
-brew install vhs
+brew install vhs  # or: go install github.com/charmbracelet/vhs@latest
 vhs demo.tape
+git add demo.gif
 ```
 
-### Running the example project
+### Example project
 
-The `testdata/example-project` contains a Go project with intentionally failing tests for CI verification:
+The `testdata/example-project` contains a Go project with intentionally failing tests. CI runs the full go-again workflow against it to verify the CLI works correctly.
 
 ```sh
 cd testdata/example-project
 go test ./... | go-again remember
 go-again list
+go-again run
 ```
 
 ## License
