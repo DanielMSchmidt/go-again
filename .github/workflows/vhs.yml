@@ -10,6 +10,21 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Cache
+              uses: Swatinem/rust-cache@v2
+
+            - name: Run tests
+              run: cargo install --path .
+
+            - name: Setup Go
+              uses: actions/setup-go@v4
+              with:
+                  go-version: "1.24"
+
             - name: Install VHS dependencies
               run: |
                   sudo apt update
