@@ -1,9 +1,16 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use tempfile::TempDir;
 
 fn go_again_cmd() -> Command {
     #[allow(deprecated)]
     Command::cargo_bin("go-again").unwrap()
+}
+
+fn go_again_cmd_with_state_dir(dir: &TempDir) -> Command {
+    let mut cmd = go_again_cmd();
+    cmd.env("GO_AGAIN_STATE_DIR", dir.path());
+    cmd
 }
 
 #[test]
@@ -109,51 +116,53 @@ FAIL	./broken [build failed]
 }
 
 // Integration test for the full workflow - tests the complete cycle
-// This test is self-contained and doesn't depend on external state
+// Uses isolated state directory for test isolation
 #[test]
 fn test_full_workflow() {
-    // Step 1: Clear any existing state
-    go_again_cmd().arg("clear").assert().success();
+    let state_dir = TempDir::new().unwrap();
 
-    // Step 2: Verify list shows no tests
-    go_again_cmd()
+    // Step 1: Verify list shows no tests (fresh state)
+    go_again_cmd_with_state_dir(&state_dir)
         .arg("list")
         .assert()
         .success()
         .stdout(predicate::str::contains("No failing tests"));
 
-    // Step 3: Verify run shows no tests
-    go_again_cmd()
+    // Step 2: Verify run shows no tests
+    go_again_cmd_with_state_dir(&state_dir)
         .arg("run")
         .assert()
         .success()
         .stdout(predicate::str::contains("No failing tests"));
 
-    // Step 4: Remember a failing test
+    // Step 3: Remember a failing test
     let input = r#"=== RUN   TestWorkflow
 --- FAIL: TestWorkflow (0.00s)
 FAIL	./workflow	0.001s
 "#;
 
-    go_again_cmd()
+    go_again_cmd_with_state_dir(&state_dir)
         .arg("remember")
         .write_stdin(input)
         .assert()
         .success()
         .stdout(predicate::str::contains("Remembered 1 failing test"));
 
-    // Step 5: List should show the test
-    go_again_cmd()
+    // Step 4: List should show the test
+    go_again_cmd_with_state_dir(&state_dir)
         .arg("list")
         .assert()
         .success()
         .stdout(predicate::str::contains("./workflow TestWorkflow"));
 
-    // Step 6: Clear again
-    go_again_cmd().arg("clear").assert().success();
+    // Step 5: Clear
+    go_again_cmd_with_state_dir(&state_dir)
+        .arg("clear")
+        .assert()
+        .success();
 
-    // Step 7: List should show no tests
-    go_again_cmd()
+    // Step 6: List should show no tests
+    go_again_cmd_with_state_dir(&state_dir)
         .arg("list")
         .assert()
         .success()

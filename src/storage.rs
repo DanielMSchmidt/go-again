@@ -7,6 +7,10 @@ use std::path::PathBuf;
 pub type StateMap = HashMap<String, Vec<FailedTest>>;
 
 fn get_state_file_path() -> Option<PathBuf> {
+    // Allow overriding state directory for testing
+    if let Ok(dir) = std::env::var("GO_AGAIN_STATE_DIR") {
+        return Some(PathBuf::from(dir).join("state.json"));
+    }
     let home = dirs::home_dir()?;
     Some(home.join(".go-again").join("state.json"))
 }
