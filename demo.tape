@@ -36,7 +36,7 @@ Sleep 2s
 # Show the run command
 Type "# We can re-run just those failing tests:"
 Enter
-Type "# (Hint: there is also go-again watch)"
+Type "# (Hint: there is also go-again select and watch)"
 Enter
 Sleep 500ms
 Type "go-again run"
