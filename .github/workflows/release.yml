@@ -167,7 +167,6 @@ jobs:
           class GoAgain < Formula
             desc "Go development helper for re-running failed tests"
             homepage "https://github.com/danielmschmidt/go-again"
-            version "${{ steps.version.outputs.version }}"
             license "MIT"
 
             on_macos do
