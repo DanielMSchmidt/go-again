@@ -30,6 +30,9 @@ pub fn load_from_path(path: Option<PathBuf>) -> io::Result<StateMap> {
     }
 
     let content = fs::read_to_string(&path)?;
+    if content.trim().is_empty() {
+        return Ok(HashMap::new());
+    }
     let state: StateMap = serde_json::from_str(&content).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
