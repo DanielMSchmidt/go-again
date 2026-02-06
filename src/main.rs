@@ -184,7 +184,7 @@ fn cmd_select() -> io::Result<()> {
 
     let options = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt(Some("Select tests to run> "))
+        .prompt(String::from("Select tests to run> "))
         .build()
         .unwrap();
 
@@ -192,9 +192,9 @@ fn cmd_select() -> io::Result<()> {
     let items_str = items.join("\n");
     let items = item_reader.of_bufread(std::io::Cursor::new(items_str));
 
-    let selected = match Skim::run_with(&options, Some(items)) {
-        Some(output) if !output.is_abort => output.selected_items,
-        _ => {
+    let selected = match Skim::run_with(options, Some(items)) {
+        Ok(output) => output.selected_items,
+        Err(_) => {
             println!("Selection cancelled.");
             return Ok(());
         }
@@ -262,7 +262,7 @@ fn cmd_watch() -> io::Result<()> {
 
         let options = SkimOptionsBuilder::default()
             .multi(true)
-            .prompt(Some("Select tests to run (Ctrl-C to quit)> "))
+            .prompt(String::from("Select tests to run (Ctrl-C to quit)> "))
             .build()
             .unwrap();
 
@@ -270,9 +270,9 @@ fn cmd_watch() -> io::Result<()> {
         let items_str = items.join("\n");
         let items = item_reader.of_bufread(std::io::Cursor::new(items_str));
 
-        let selected = match Skim::run_with(&options, Some(items)) {
-            Some(output) if !output.is_abort => output.selected_items,
-            _ => {
+        let selected = match Skim::run_with(options, Some(items)) {
+            Ok(output) => output.selected_items,
+            Err(_) => {
                 println!("Watch mode ended.");
                 return Ok(());
             }
