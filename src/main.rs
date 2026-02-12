@@ -1,7 +1,11 @@
 use clap::{Parser, Subcommand};
 use go_again::{parser, project, runner, storage, FailedTest};
+use notify::{RecursiveMode, Watcher};
 use skim::prelude::*;
 use std::io::{self, BufRead, Write};
+use std::path::Path;
+use std::sync::mpsc;
+use std::time::Instant;
 
 #[derive(Parser)]
 #[command(name = "go-again")]
@@ -243,8 +247,39 @@ fn cmd_select() -> io::Result<()> {
     Ok(())
 }
 
+enum WatchEvent {
+    FileChanged,
+    SelectTests,
+}
+
+fn run_and_print(tests: &[FailedTest]) {
+    println!("\nRunning {} selected test(s)...\n", tests.len());
+
+    let results = runner::run_tests(tests);
+
+    for result in &results {
+        let status = if result.passed { "PASS" } else { "FAIL" };
+        println!("[{}] {} {}", status, result.test.package, result.test.name);
+
+        if !result.passed {
+            for line in result.output.lines().take(20) {
+                println!("  {}", line);
+            }
+            if result.output.lines().count() > 20 {
+                println!("  ... (output truncated)");
+            }
+            println!();
+        }
+    }
+
+    let passed = results.iter().filter(|r| r.passed).count();
+    let failed = results.len() - passed;
+    println!("\nResults: {} passed, {} failed", passed, failed);
+}
+
 fn cmd_watch() -> io::Result<()> {
     let key = project::get_project_key()?;
+    let git_root = project::get_git_root()?;
 
     loop {
         let tests = storage::get_for_project(&key)?;
@@ -295,33 +330,73 @@ fn cmd_watch() -> io::Result<()> {
             })
             .collect();
 
-        println!("\nRunning {} selected test(s)...\n", selected_tests.len());
+        // Initial run
+        run_and_print(&selected_tests);
 
-        let results = runner::run_tests(&selected_tests);
+        // Set up channel for watch events
+        let (tx, rx) = mpsc::channel();
 
-        for result in &results {
-            let status = if result.passed { "PASS" } else { "FAIL" };
-            println!("[{}] {} {}", status, result.test.package, result.test.name);
-
-            if !result.passed {
-                for line in result.output.lines().take(20) {
-                    println!("  {}", line);
+        // Start file watcher
+        let tx_watcher = tx.clone();
+        let mut watcher =
+            notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
+                if let Ok(event) = res {
+                    let dominated_by_git = event
+                        .paths
+                        .iter()
+                        .all(|p| p.components().any(|c| c.as_os_str() == ".git"));
+                    if !dominated_by_git {
+                        let _ = tx_watcher.send(WatchEvent::FileChanged);
+                    }
                 }
-                if result.output.lines().count() > 20 {
-                    println!("  ... (output truncated)");
+            })
+            .map_err(|e| io::Error::other(format!("Failed to create file watcher: {e}")))?;
+
+        watcher
+            .watch(Path::new(&git_root), RecursiveMode::Recursive)
+            .map_err(|e| io::Error::other(format!("Failed to watch directory: {e}")))?;
+
+        // Spawn stdin reader thread
+        let tx_stdin = tx.clone();
+        std::thread::spawn(move || {
+            let stdin = io::stdin();
+            let mut line = String::new();
+            loop {
+                line.clear();
+                if stdin.lock().read_line(&mut line).is_err() || line.is_empty() {
+                    break;
                 }
-                println!();
+                let _ = tx_stdin.send(WatchEvent::SelectTests);
+            }
+        });
+
+        println!("\nWatching for changes... (Enter to re-select, Ctrl-C to quit)");
+
+        let mut last_run = Instant::now();
+
+        // Event loop
+        loop {
+            match rx.recv() {
+                Ok(WatchEvent::FileChanged) => {
+                    if last_run.elapsed().as_millis() < 500 {
+                        continue;
+                    }
+                    run_and_print(&selected_tests);
+                    last_run = Instant::now();
+                    println!(
+                        "\nWatching for changes... (Enter to re-select, Ctrl-C to quit)"
+                    );
+                }
+                Ok(WatchEvent::SelectTests) => {
+                    // Drop watcher by breaking; outer loop will re-select
+                    break;
+                }
+                Err(_) => {
+                    // Channel closed, exit
+                    return Ok(());
+                }
             }
         }
-
-        let passed = results.iter().filter(|r| r.passed).count();
-        let failed = results.len() - passed;
-        println!("\nResults: {} passed, {} failed", passed, failed);
-        println!("\nPress Enter to continue to selection...");
-
-        // Wait for user to press Enter before returning to selection
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
     }
 }
 

@@ -10,7 +10,7 @@ pub fn get_project_key() -> io::Result<String> {
 }
 
 /// Get the git repository root directory.
-fn get_git_root() -> io::Result<String> {
+pub fn get_git_root() -> io::Result<String> {
     let output = Command::new("git")
         .args(["rev-parse", "--show-toplevel"])
         .output()?;
