@@ -362,9 +362,7 @@ fn cmd_watch() -> io::Result<()> {
                     }
                     let all_ignored = event.paths.iter().all(|p| {
                         let is_dir = p.is_dir();
-                        gitignore
-                            .matched_path_or_any_parents(p, is_dir)
-                            .is_ignore()
+                        gitignore.matched_path_or_any_parents(p, is_dir).is_ignore()
                     });
                     if !all_ignored {
                         let _ = tx_watcher.send(WatchEvent::FileChanged);
