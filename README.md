@@ -1,6 +1,6 @@
 # go-again
 
-A CLI tool that remembers your failing Go tests so you can re-run them quickly.
+A CLI tool that remembers your failing Go tests so you can re-run or watch them quickly.
 
 ![go-again demo](demo.gif)
 
