@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use go_again::{parser, project, runner, storage, FailedTest};
+use ignore::gitignore::GitignoreBuilder;
 use notify::{RecursiveMode, Watcher};
 use skim::prelude::*;
 use std::io::{self, BufRead, Write};
@@ -250,6 +251,7 @@ fn cmd_select() -> io::Result<()> {
 enum WatchEvent {
     FileChanged,
     SelectTests,
+    RerunTests,
 }
 
 fn run_and_print(tests: &[FailedTest]) {
@@ -336,6 +338,16 @@ fn cmd_watch() -> io::Result<()> {
         // Set up channel for watch events
         let (tx, rx) = mpsc::channel();
 
+        // Build gitignore matcher
+        let gitignore_path = Path::new(&git_root).join(".gitignore");
+        let mut builder = GitignoreBuilder::new(&git_root);
+        if gitignore_path.exists() {
+            builder.add(&gitignore_path);
+        }
+        let gitignore = builder
+            .build()
+            .map_err(|e| io::Error::other(format!("Failed to parse .gitignore: {e}")))?;
+
         // Start file watcher
         let tx_watcher = tx.clone();
         let mut watcher =
@@ -345,7 +357,16 @@ fn cmd_watch() -> io::Result<()> {
                         .paths
                         .iter()
                         .all(|p| p.components().any(|c| c.as_os_str() == ".git"));
-                    if !dominated_by_git {
+                    if dominated_by_git {
+                        return;
+                    }
+                    let all_ignored = event.paths.iter().all(|p| {
+                        let is_dir = p.is_dir();
+                        gitignore
+                            .matched_path_or_any_parents(p, is_dir)
+                            .is_ignore()
+                    });
+                    if !all_ignored {
                         let _ = tx_watcher.send(WatchEvent::FileChanged);
                     }
                 }
@@ -366,11 +387,16 @@ fn cmd_watch() -> io::Result<()> {
                 if stdin.lock().read_line(&mut line).is_err() || line.is_empty() {
                     break;
                 }
-                let _ = tx_stdin.send(WatchEvent::SelectTests);
+                let event = if line.trim() == "r" {
+                    WatchEvent::RerunTests
+                } else {
+                    WatchEvent::SelectTests
+                };
+                let _ = tx_stdin.send(event);
             }
         });
 
-        println!("\nWatching for changes... (Enter to re-select, Ctrl-C to quit)");
+        println!("\nWatching for changes... (r to re-run, Enter to re-select, Ctrl-C to quit)");
 
         let mut last_run = Instant::now();
 
@@ -384,7 +410,14 @@ fn cmd_watch() -> io::Result<()> {
                     run_and_print(&selected_tests);
                     last_run = Instant::now();
                     println!(
-                        "\nWatching for changes... (Enter to re-select, Ctrl-C to quit)"
+                        "\nWatching for changes... (r to re-run, Enter to re-select, Ctrl-C to quit)"
+                    );
+                }
+                Ok(WatchEvent::RerunTests) => {
+                    run_and_print(&selected_tests);
+                    last_run = Instant::now();
+                    println!(
+                        "\nWatching for changes... (r to re-run, Enter to re-select, Ctrl-C to quit)"
                     );
                 }
                 Ok(WatchEvent::SelectTests) => {
