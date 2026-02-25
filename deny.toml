@@ -4,10 +4,6 @@
 [advisories]
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-# atty is unmaintained but comes from skim dependency - no fix available
-# time DoS via stack exhaustion comes from skim dependency - no fix available
-ignore = ["RUSTSEC-2024-0375", "RUSTSEC-2026-0009"]
-
 [licenses]
 allow = [
     "MIT",
@@ -21,6 +17,7 @@ allow = [
     "Unicode-3.0",
     "Unicode-DFS-2016",
     "CC0-1.0",
+    "0BSD",
 ]
 confidence-threshold = 0.8
 
