@@ -10,7 +10,7 @@ clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 dirs = "5"
-skim = "0.10"
+skim = "3.0"
 notify = "8"
 ignore = "0.4"
 
