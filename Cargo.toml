@@ -9,7 +9,7 @@ license = "MIT"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-dirs = "5"
+dirs = "6"
 skim = "3"
 notify = "8"
 ignore = "0.4"
